@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal</title>
+    <link rel="stylesheet" href="terminal.css">
+</head>
+<body>
+    <script src="../desktop/terminal.js"></script>
+    <div class="terminal-window">
+        <div class="terminal-header">
+            <span>Terminal</span>
+            <div class="window-controls" onclick="closeTerminal()">
+                <span class="close-button" >×</span>
+            </div>
+        </div>
+        <div class="terminal-body">
+            <div class="terminal-output">
+                <p><span class="user">user@virtual:</span><span class="prompt">$</span> ls -l</p>
+                <p>-rw-r--r-- 1 user user 1024 Apr 18 22:25 document.txt</p>
+                <p>drwxr-xr-x 2 user user 4096 Apr 18 22:25 downloads</p>
+                <p><span class="user">user@virtual:</span><span class="prompt">$</span> cd downloads</p>
+                <p><span class="user">user@virtual:</span><span class="prompt">$</span> </p>
+            </div>
+            <div class="terminal-input">
+                <span class="user">user@virtual:</span><span class="prompt">$</span> <input type="text" autofocus>
+            </div>
+        </div>
+    </div>
+    
+
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const input = document.querySelector(".terminal-input input");
+            const output = document.querySelector(".terminal-output");
+        
+            let currentDir = "~";
+        
+            const fileSystem = {
+                "~": {
+                    "document.txt": "file",
+                    "downloads": {
+                        "type": "directory",
+                        "content": {}
+                    }
+                },
+                "~/downloads": {}
+            };
+        
+            input.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    const command = input.value.trim();
+                    appendOutput(`user@virtual:${currentDir} $ ${command}`);
+                    handleCommand(command);
+                    input.value = "";
+                }
+            });
+        
+            function appendOutput(text) {
+                const line = document.createElement("p");
+                line.textContent = text;
+                output.appendChild(line);
+                output.scrollTop = output.scrollHeight;
+            }
+        
+            function handleCommand(cmd) {
+                if (cmd === "ls") {
+                    const files = Object.keys(fileSystem[currentDir] || {})
+                        .map(key => {
+                            if (typeof fileSystem[currentDir][key] === "object") {
+                                return `drwxr-xr-x 2 user user 4096 Apr 18 22:25 ${key}`;
+                            } else {
+                                return `-rw-r--r-- 1 user user 1024 Apr 18 22:25 ${key}`;
+                            }
+                        }).join("\n");
+                    appendOutput(files);
+                } else if (cmd.startsWith("cd")) {
+                    const parts = cmd.split(" ");
+                    if (parts.length === 2) {
+                        const dir = parts[1];
+                        const newPath = currentDir === "~" ? `~/${dir}` : `${currentDir}/${dir}`;
+                        if (fileSystem[newPath]) {
+                            currentDir = newPath;
+                        } else {
+                            appendOutput(`bash: cd: ${dir}: No such file or directory`);
+                        }
+                    } else {
+                        appendOutput("bash: cd: missing operand");
+                    }
+                } else if (cmd === "clear") {
+                    output.innerHTML = "";
+                } else {
+                    appendOutput(`bash: ${cmd}: command not found`);
+                }
+            }
+        });
+        </script>
+        
+</body>
+</html>
