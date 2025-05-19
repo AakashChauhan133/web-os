@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simple File Manager</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="filemanager-window">
+      <div class="header">Simple File Manager</div>
+      <button id="close-btn" title="Close" aria-label="Close file manager">
+        ×
+      </button>
+      <div class="body" style="position: relative">
+        <div class="sidebar">
+          <ul>
+            <li onclick="loadFiles('home')">🏠 Home</li>
+            <li onclick="loadFiles('downloads')">⬇️ Downloads</li>
+            <li onclick="loadFiles('desktop')">💻 Desktop</li>
+          </ul>
+        </div>
+        <div class="file-list" id="file-list">
+          <!-- Files or editor will load here -->
+        </div>
+      </div>
+    </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const closeButton = document.getElementById("close-btn");
+        if (closeButton) {
+          closeButton.addEventListener("click", () => {
+            // Access the parent window from within the iframe
+            window.parent.document.getElementById("fileid").style.display =
+              "none";
+            // Optional: Reset the showfile variable if needed
+            window.parent.showfile = 1;
+          });
+        }
+      });
+    </script>
+    <script>
+      let currentFolder = "home";
+      let currentFile = null;
+
+      function loadFiles(folder) {
+        currentFolder = folder;
+        fetch(`get_files.php?folder=${folder}`)
+          .then((res) => res.json())
+          .then((files) => {
+            const fileList = document.getElementById("file-list");
+            fileList.innerHTML = "";
+            if (files.length === 0) {
+              fileList.innerHTML = "<p>No files found.</p>";
+              return;
+            }
+            files.forEach((file) => {
+              const div = document.createElement("div");
+              div.className = "file-item";
+              div.textContent = file;
+              div.addEventListener("click", () => openFile(file));
+              fileList.appendChild(div);
+            });
+          })
+          .catch((err) => {
+            console.error("Error loading files:", err);
+            alert("Failed to load files");
+          });
+      }
+
+      function openFile(filename) {
+        currentFile = filename;
+        fetch(
+          `get_file_content.php?folder=${currentFolder}&filename=${encodeURIComponent(
+            filename
+          )}`
+        )
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.error) {
+              alert(data.error);
+              return;
+            }
+            showEditor(filename, data.content);
+          })
+          .catch((err) => {
+            console.error("Error loading file content:", err);
+            alert("Failed to load file content");
+          });
+      }
+
+      function showEditor(filename, content) {
+        const fileList = document.getElementById("file-list");
+        fileList.innerHTML = `
+        <div class="editor">
+          <h3>${filename}</h3>
+          <textarea id="file-editor">${content}</textarea>
+          <div class="editor-buttons">
+            <button id="save-btn">Save</button>
+            <button id="cancel-btn">Cancel</button>
+          </div>
+        </div>
+      `;
+
+        document.getElementById("save-btn").onclick = saveFile;
+        document.getElementById("cancel-btn").onclick = () =>
+          loadFiles(currentFolder);
+      }
+
+      function saveFile() {
+        const newContent = document.getElementById("file-editor").value;
+        fetch("save_file_content.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `folder=${encodeURIComponent(
+            currentFolder
+          )}&filename=${encodeURIComponent(
+            currentFile
+          )}&content=${encodeURIComponent(newContent)}`,
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) {
+              alert("File saved successfully!");
+              loadFiles(currentFolder);
+            } else {
+              alert("Error saving file: " + (data.error || "Unknown error"));
+            }
+          })
+          .catch((err) => {
+            console.error("Error saving file:", err);
+            alert("Failed to save file");
+          });
+      }
+
+      window.onload = () => {
+        loadFiles("home");
+      };
+    </script>
+  </body>
+</html>

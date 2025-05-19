@@ -1,29 +1,35 @@
 let showUser = 1;
 
 function toggleUser() {
+  const userList = document.getElementById("userList");
+
   if (showUser === 1) {
     fetch("get-users.php")
       .then((response) => response.json())
       .then((data) => {
-        console.log("Users:", data);
-        const userList = document.getElementById("userList");
         userList.style.display = "inline";
 
-        // Convert array of users to HTML list
-        const html = data.map(user => `<li>${user}</li>`).join("");
+        // Build list with click handlers
+        const html = data.map(user => `<li onclick="selectUser('${user}')">${user}</li>`).join("");
         userList.innerHTML = `<ul>${html}</ul>`;
       })
       .catch((error) => {
         console.error("Error fetching users:", error);
       });
   } else {
-    document.getElementById("userList").style.display = "none";
+    userList.style.display = "none";
   }
 
-  showUser = showUser * -1;
+  showUser *= -1;
 }
 
-
+function selectUser(username) {
+  // Update form hidden input and visible text
+  document.getElementById("usernameInput").value = username;
+  document.getElementById("displayUsername").textContent = username;
+  document.getElementById("userList").style.display = "none";
+  showUser = -1;
+}
 
 
 let showPower = 1;

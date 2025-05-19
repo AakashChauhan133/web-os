@@ -16,23 +16,22 @@ else
     echo "connceted";
 }
 
-// Get the submitted pin
+// Get submitted username and pin
+$username = $_POST['username'] ?? '';
 $pin = $_POST['pin'] ?? '';
 
-if (!empty($pin)) {
-    // Search for user with this PIN
-    $stmt = $conn->prepare("SELECT * FROM users WHERE username = 'Admin' AND pin = ?");
-    $stmt->bind_param("s", $pin);
+if (!empty($username) && !empty($pin)) {
+    $stmt = $conn->prepare("SELECT * FROM users WHERE username = ? AND pin = ?");
+    $stmt->bind_param("ss", $username, $pin);
     $stmt->execute();
     $result = $stmt->get_result();
 
     if ($result->num_rows === 1) {
         $_SESSION['loggedin'] = true;
-        $_SESSION['username'] = 'Admin';
-        header("Location: ../desktop"); // Your landing page
+        $_SESSION['username'] = $username;
+        header("Location: ../desktop");
         exit();
     } else {
-        echo "Invalid PIN!";
+        echo "Invalid Username or PIN!";
     }
 }
-?>

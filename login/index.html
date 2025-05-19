@@ -9,16 +9,36 @@
   <body>
     <div class="container">
       <div class="login-panel">
-        <div class="avatar">
+        <!-- <div class="avatar">
           <img src="user-icon.png" alt="Admin Avatar" />
-        </div>
-        <div class="username">Admin</div>
+        </div> -->
+        <!-- <div class="username">Admin</div> -->
 
-        <form action="login.php" method="POST">
+
+
+        <form action="login.php" method="POST" id="loginForm">
+          <div class="inner-login-panel">
+
+            <input type="hidden" name="username" id="usernameInput" value="Admin" />
+            <div class="avatar">
+              <img src="user-icon.png" alt="User Avatar"/>
+            </div>
+            <div class="username" id="displayUsername">Admin</div>
+          </div>
+        
           <div class="password-input">
             <input type="password" name="pin" placeholder="PIN" required />
           </div>
         </form>
+        
+
+
+<!--         
+        <form action="login.php" method="POST">
+          <div class="password-input">
+            <input type="password" name="pin" placeholder="PIN" required />
+          </div>
+        </form> -->
       </div>
       <div id="userList" style="display: none"></div>
   

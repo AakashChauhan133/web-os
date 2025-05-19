@@ -7,12 +7,11 @@
     <link rel="stylesheet" href="terminal.css">
 </head>
 <body>
-    <script src="../desktop/terminal.js"></script>
     <div class="terminal-window">
         <div class="terminal-header">
             <span>Terminal</span>
             <div class="window-controls" onclick="closeTerminal()">
-                <span class="close-button" >×</span>
+                <span class="close-button" id="close-terminal">×</span>
             </div>
         </div>
         <div class="terminal-body">
@@ -28,27 +27,24 @@
             </div>
         </div>
     </div>
-    
-
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const input = document.querySelector(".terminal-input input");
             const output = document.querySelector(".terminal-output");
-        
+
             let currentDir = "~";
-        
+
             const fileSystem = {
                 "~": {
-                    "document.txt": "file",
+                    "document.txt": { type: "file", content: "This is a document." },
                     "downloads": {
-                        "type": "directory",
-                        "content": {}
+                        type: "directory",
+                        content: {}
                     }
-                },
-                "~/downloads": {}
+                }
             };
-        
+
             input.addEventListener("keydown", (e) => {
                 if (e.key === "Enter") {
                     const command = input.value.trim();
@@ -57,46 +53,130 @@
                     input.value = "";
                 }
             });
-        
+
             function appendOutput(text) {
                 const line = document.createElement("p");
                 line.textContent = text;
                 output.appendChild(line);
                 output.scrollTop = output.scrollHeight;
             }
-        
+
             function handleCommand(cmd) {
-                if (cmd === "ls") {
-                    const files = Object.keys(fileSystem[currentDir] || {})
-                        .map(key => {
-                            if (typeof fileSystem[currentDir][key] === "object") {
-                                return `drwxr-xr-x 2 user user 4096 Apr 18 22:25 ${key}`;
-                            } else {
-                                return `-rw-r--r-- 1 user user 1024 Apr 18 22:25 ${key}`;
-                            }
-                        }).join("\n");
-                    appendOutput(files);
-                } else if (cmd.startsWith("cd")) {
-                    const parts = cmd.split(" ");
-                    if (parts.length === 2) {
-                        const dir = parts[1];
-                        const newPath = currentDir === "~" ? `~/${dir}` : `${currentDir}/${dir}`;
-                        if (fileSystem[newPath]) {
-                            currentDir = newPath;
-                        } else {
-                            appendOutput(`bash: cd: ${dir}: No such file or directory`);
+                const parts = cmd.trim().split(" ");
+                const base = parts[0];
+                const args = parts.slice(1);
+
+                switch (base) {
+                    case "ls":
+                        const dir = fileSystem[currentDir];
+                        if (dir && dir.type === "directory") {
+                            const files = Object.keys(dir.content)
+                                .map(key => {
+                                    const item = dir.content[key];
+                                    if (item.type === "directory") {
+                                        return `drwxr-xr-x user user 4096 ${key}`;
+                                    } else {
+                                        return `-rw-r--r-- user user ${item.content.length} ${key}`;
+                                    }
+                                }).join("\n");
+                            appendOutput(files);
                         }
-                    } else {
-                        appendOutput("bash: cd: missing operand");
-                    }
-                } else if (cmd === "clear") {
-                    output.innerHTML = "";
-                } else {
-                    appendOutput(`bash: ${cmd}: command not found`);
+                        break;
+
+                    case "cd":
+                        if (args.length === 0) {
+                            appendOutput("bash: cd: missing operand");
+                        } else {
+                            const target = args[0];
+                            let newPath = target === ".."
+                                ? currentDir.split("/").slice(0, -1).join("/") || "~"
+                                : currentDir === "~" ? `~/${target}` : `${currentDir}/${target}`;
+
+                            const dir = fileSystem[newPath];
+                            if (dir && dir.type === "directory") {
+                                currentDir = newPath;
+                            } else {
+                                appendOutput(`bash: cd: ${target}: No such file or directory`);
+                            }
+                        }
+                        break;
+
+                    case "pwd":
+                        appendOutput(currentDir.replace("~", "/home/user"));
+                        break;
+
+                    case "mkdir":
+                        if (args.length === 0) {
+                            appendOutput("bash: mkdir: missing operand");
+                        } else {
+                            const dirName = args[0];
+                            const dir = fileSystem[currentDir];
+                            if (!dir.content[dirName]) {
+                                dir.content[dirName] = { type: "directory", content: {} };
+                                appendOutput(`Directory '${dirName}' created.`);
+                            } else {
+                                appendOutput(`bash: mkdir: cannot create directory '${dirName}': File exists`);
+                            }
+                        }
+                        break;
+
+                    case "touch":
+                        if (args.length === 0) {
+                            appendOutput("bash: touch: missing file operand");
+                        } else {
+                            const fileName = args[0];
+                            const dir = fileSystem[currentDir];
+                            if (!dir.content[fileName]) {
+                                dir.content[fileName] = { type: "file", content: "" };
+                                appendOutput(`File '${fileName}' created.`);
+                            } else {
+                                appendOutput(`bash: touch: '${fileName}': File exists`);
+                            }
+                        }
+                        break;
+
+                    case "echo":
+                        appendOutput(args.join(" "));
+                        break;
+
+                    case "cat":
+                        if (args.length === 0) {
+                            appendOutput("bash: cat: missing file operand");
+                        } else {
+                            const fileName = args[0];
+                            const file = fileSystem[currentDir].content[fileName];
+                            if (file && file.type === "file") {
+                                appendOutput(file.content);
+                            } else {
+                                appendOutput(`bash: cat: ${fileName}: No such file`);
+                            }
+                        }
+                        break;
+
+                    case "help":
+                        appendOutput("Supported commands: ls, cd, pwd, mkdir, touch, echo, cat, clear, help, exit");
+                        break;
+
+                    case "exit":
+                        closeTerminal();
+                        break;
+
+                    case "clear":
+                        output.innerHTML = "";
+                        break;
+
+                    default:
+                        appendOutput(`bash: ${base}: command not found`);
+                        break;
                 }
             }
+
+            function closeTerminal() {
+                document.querySelector(".terminal-window").style.display = "none";
+                appendOutput("Terminal closed.");
+            }
         });
-        </script>
-        
+    </script>
+
 </body>
 </html>
